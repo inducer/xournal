@@ -76,9 +76,10 @@ void init_stuff (int argc, char *argv[])
   ui.default_page.bg->canvas_item = NULL;
   ui.layerbox_length = 0;
 
-  if (argc > 2 || (argc == 2 && argv[1][0] == '-')) {
+  if (argc > 4 || (argc >= 2 && argv[1][0] == '-')
+      || (argc == 3) || (argc == 4  && (argv[2][0] != '-' || argv[2][1] != 'e' || argv[3][0] == '-'))) {
     printf(_("Invalid command line parameters.\n"
-           "Usage: %s [filename.xoj]\n"), argv[0]);
+           "Usage: %s [filename.xoj [-e export_as.pdf ]]\n"), argv[0]);
     gtk_exit(0);
   }
    
@@ -329,6 +330,25 @@ void init_stuff (int argc, char *argv[])
     gtk_dialog_run(GTK_DIALOG(w));
     gtk_widget_destroy(w);
   }
+  if (argc == 2) return;
+  set_cursor_busy(TRUE);
+  if (g_path_is_absolute(argv[3]))
+    tmpfn = g_strdup(argv[3]);
+  else {
+    tmppath = g_get_current_dir();
+    tmpfn = g_build_filename(tmppath, argv[3], NULL);
+    g_free(tmppath);
+  }
+  success = print_to_pdf(tmpfn);
+  g_free(tmpfn);
+  set_cursor_busy(FALSE);
+  if (!success) {
+    w = gtk_message_dialog_new(GTK_WINDOW (winMain), GTK_DIALOG_DESTROY_WITH_PARENT,
+       GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _("Error exporting file '%s' to '%s'"), argv[1], argv[3]);
+    gtk_dialog_run(GTK_DIALOG(w));
+    gtk_widget_destroy(w);
+  }
+  gtk_exit(0);
 }
 
 
