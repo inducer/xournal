@@ -356,8 +356,9 @@ gboolean start_resizesel(GdkEvent *event)
 void start_vertspace(GdkEvent *event)
 {
   double pt[2];
-  GList *itemlist;
+  GList *itemlist, *layerlist;
   struct Item *item;
+  struct Layer *layer;
 
   reset_selection();
   ui.cur_item_type = ITEM_MOVESEL_VERT;
@@ -368,12 +369,15 @@ void start_vertspace(GdkEvent *event)
 
   get_pointer_coords(event, pt);
   ui.selection->bbox.top = ui.selection->bbox.bottom = pt[1];
-  for (itemlist = ui.cur_layer->items; itemlist!=NULL; itemlist = itemlist->next) {
-    item = (struct Item *)itemlist->data;
-    if (item->bbox.top >= pt[1]) {
-      ui.selection->items = g_list_append(ui.selection->items, item); 
-      if (item->bbox.bottom > ui.selection->bbox.bottom)
-        ui.selection->bbox.bottom = item->bbox.bottom;
+  for (layerlist = ui.cur_page->layers; layerlist!=NULL; layerlist = layerlist->next) {
+    layer = (struct Item *)layerlist->data;
+    for (itemlist = layer->items; itemlist!=NULL; itemlist = itemlist->next) {
+      item = (struct Item *)itemlist->data;
+      if (item->bbox.top >= pt[1]) {
+        ui.selection->items = g_list_append(ui.selection->items, item);
+        if (item->bbox.bottom > ui.selection->bbox.bottom)
+          ui.selection->bbox.bottom = item->bbox.bottom;
+      }
     }
   }
 
