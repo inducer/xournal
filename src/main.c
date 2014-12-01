@@ -339,7 +339,7 @@ void init_stuff (int argc, char *argv[])
     tmpfn = g_build_filename(tmppath, argv[3], NULL);
     g_free(tmppath);
   }
-  success = print_to_pdf(tmpfn);
+  success = print_to_pdf_cairo(tmpfn);
   g_free(tmpfn);
   set_cursor_busy(FALSE);
   if (!success) {
