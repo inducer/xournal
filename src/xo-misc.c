@@ -33,6 +33,7 @@
 #include "xo-paint.h"
 #include "xo-shapes.h"
 #include "xo-image.h"
+#include "xo-selection.h"
 
 // some global constants
 
@@ -455,7 +456,7 @@ void refstring_unref(struct Refstring *rs)
 
 int finite_sized(double x) // detect unrealistic coordinate values
 {
-  return (finite(x) && x<1E6 && x>-1E6);
+  return (finite(x) && x<1E8 && x>-1E8);
 }
 
 
@@ -573,6 +574,9 @@ void emergency_enable_xinput(GdkInputMode mode)
   GList *dev_list;
   GdkDevice *dev;
 
+#ifdef INPUT_DEBUG
+  printf("DEBUG: Emergency xinput enable/disable: %d\n", mode);
+#endif
   gdk_flush();
   gdk_error_trap_push();
   for (dev_list = gdk_devices_list(); dev_list != NULL; dev_list = dev_list->next) {
@@ -1897,7 +1901,7 @@ gboolean ok_to_close(void)
   gtk_dialog_add_button(GTK_DIALOG (dialog), GTK_STOCK_SAVE, GTK_RESPONSE_YES);
   gtk_dialog_add_button(GTK_DIALOG (dialog), GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL);
   gtk_dialog_set_default_response(GTK_DIALOG (dialog), GTK_RESPONSE_YES);
-  response = gtk_dialog_run(GTK_DIALOG (dialog));
+  response = wrapper_gtk_dialog_run(GTK_DIALOG (dialog));
   gtk_widget_destroy(dialog);
   if (response == GTK_RESPONSE_CANCEL || response == GTK_RESPONSE_DELETE_EVENT) 
     return FALSE; // aborted
@@ -2296,7 +2300,7 @@ void hide_unimplemented(void)
   }  
   
   /* screenshot feature doesn't work yet in Win32 */
-#ifdef WIN32
+#ifndef GDK_WINDOWING_X11
   gtk_widget_hide(GET_COMPONENT("journalScreenshot"));
 #endif
 }  
@@ -2538,4 +2542,16 @@ wrapper_poppler_page_render_to_pixbuf (PopplerPage *page,
 
   wrapper_copy_cairo_surface_to_pixbuf (surface, pixbuf);
   cairo_surface_destroy (surface);
+}
+
+// wrapper for gtk_dialog_run that disables xinput (bug #159)
+
+gint wrapper_gtk_dialog_run(GtkDialog *dialog)
+{
+  gint response;
+
+  if (!gtk_check_version(2, 17, 0))
+    emergency_enable_xinput(GDK_MODE_DISABLED);
+  response = gtk_dialog_run(dialog);
+  return response;            
 }

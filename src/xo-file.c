@@ -31,7 +31,7 @@
 #include <glib/gstdio.h>
 #include <poppler/glib/poppler.h>
 
-#ifndef WIN32
+#ifdef GDK_WINDOWING_X11
  #include <gdk/gdkx.h>
  #include <X11/Xlib.h>
 #endif
@@ -44,6 +44,7 @@
 #include "xo-file.h"
 #include "xo-paint.h"
 #include "xo-image.h"
+#include "xo-shapes.h"
 
 const char *tool_names[NUM_TOOLS] = {"pen", "eraser", "highlighter", "text", "selectregion", "selectrect", "vertspace", "hand", "image"};
 const char *color_names[COLOR_MAX] = {"black", "blue", "red", "green",
@@ -199,7 +200,7 @@ gboolean save_journal(const char *filename, gboolean is_auto)
             dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
               GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, 
               _("Could not write background '%s'. Continuing anyway."), tmpfn);
-            gtk_dialog_run(GTK_DIALOG(dialog));
+            wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
             gtk_widget_destroy(dialog);
           }
           g_free(tmpfn);
@@ -233,7 +234,7 @@ gboolean save_journal(const char *filename, gboolean is_auto)
             dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
               GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, 
               _("Could not write background '%s'. Continuing anyway."), tmpfn);
-            gtk_dialog_run(GTK_DIALOG(dialog));
+            wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
             gtk_widget_destroy(dialog);
           }
           g_free(tmpfn);
@@ -419,7 +420,7 @@ char *check_for_autosave(char *filename)
   gtk_dialog_add_button(GTK_DIALOG(dialog), _("Restore auto-save"), GTK_RESPONSE_YES);
   gtk_dialog_add_button(GTK_DIALOG(dialog), _("Delete auto-saves"), GTK_RESPONSE_REJECT);
   gtk_dialog_set_default_response(GTK_DIALOG (dialog), GTK_RESPONSE_NO);
-  response = gtk_dialog_run(GTK_DIALOG(dialog));
+  response = wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
   
   if (response == GTK_RESPONSE_REJECT) {  // delete all auto-saves + attachments
@@ -460,7 +461,7 @@ char *check_for_autosave(char *filename)
     gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (dialog), filt_autosave);
     gtk_file_chooser_add_filter(GTK_FILE_CHOOSER (dialog), filt_all);
     gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
-    if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_OK) {
+    if (wrapper_gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_OK) {
       gtk_widget_destroy(dialog);
       return g_strdup(filename);
     }
@@ -669,7 +670,7 @@ void xoj_parser_start_element(GMarkupParseContext *context,
                 GTK_MESSAGE_WARNING, GTK_BUTTONS_OK, 
                 _("Could not open background '%s'. Setting background to white."),
                 tmpbg_filename);
-              gtk_dialog_run(GTK_DIALOG(dialog));
+              wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
               gtk_widget_destroy(dialog);
               tmpPage->bg->pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, 1, 1);
               gdk_pixbuf_fill(tmpPage->bg->pixbuf, 0xffffffff); // solid white
@@ -987,7 +988,7 @@ gboolean user_wants_second_chance(char **filename)
     GTK_MESSAGE_ERROR, GTK_BUTTONS_YES_NO, 
     _("Could not open background '%s'.\nSelect another file?"),
     *filename);
-  response = gtk_dialog_run(GTK_DIALOG(dialog));
+  response = wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
   gtk_widget_destroy(dialog);
   if (response != GTK_RESPONSE_YES) return FALSE;
   dialog = gtk_file_chooser_dialog_new(_("Open PDF"), GTK_WINDOW (winMain),
@@ -1008,7 +1009,7 @@ gboolean user_wants_second_chance(char **filename)
 
   if (ui.default_path!=NULL) gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER (dialog), ui.default_path);
 
-  if (gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_OK) {
+  if (wrapper_gtk_dialog_run(GTK_DIALOG(dialog)) != GTK_RESPONSE_OK) {
     gtk_widget_destroy(dialog);
     return FALSE;
   }
@@ -1136,7 +1137,7 @@ gboolean open_journal(char *filename)
       dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
         GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _("Could not open background '%s'."),
         tmpfn);
-      gtk_dialog_run(GTK_DIALOG(dialog));
+      wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
       gtk_widget_destroy(dialog);
     }
     g_free(tmpfn);
@@ -1159,7 +1160,7 @@ gboolean open_journal(char *filename)
     dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
         GTK_MESSAGE_OTHER, GTK_BUTTONS_YES_NO, 
         _("Save this version and delete auto-save?"));
-    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES) {
+    if (wrapper_gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES) {
       if (save_journal(filename, FALSE)) { // success: delete autosave
         delete_autosave(filename_actual);
         ui.saved = TRUE;
@@ -1167,7 +1168,7 @@ gboolean open_journal(char *filename)
         gtk_widget_destroy(dialog);
         dialog = gtk_message_dialog_new(GTK_WINDOW (winMain), GTK_DIALOG_DESTROY_WITH_PARENT,
            GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _("Error saving file '%s'"), filename);
-        gtk_dialog_run(GTK_DIALOG(dialog));
+        wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
       }
     }
     gtk_widget_destroy(dialog);
@@ -1214,7 +1215,7 @@ GList *attempt_load_gv_bg(char *filename)
   GdkPixbufLoader *loader;
   FILE *gs_pipe, *f;
   unsigned char *buf;
-  char *pipename;
+  char *pipename, *quotedfilename;
   int buflen, remnlen, file_pageno;
   
   f = g_fopen(filename, "rb");
@@ -1228,8 +1229,14 @@ GList *attempt_load_gv_bg(char *filename)
   }
   
   fclose(f);
-  pipename = g_strdup_printf(GS_CMDLINE, (double)GS_BITMAP_DPI, filename);
+  quotedfilename = g_shell_quote(filename);
+  pipename = g_strdup_printf(GS_CMDLINE, (double)GS_BITMAP_DPI, quotedfilename);
+  g_free(quotedfilename);
+#ifdef WIN32
   gs_pipe = popen(pipename, "rb");
+#else
+  gs_pipe = popen(pipename, "r");
+#endif
   g_free(pipename);
   
   bg_list = NULL;
@@ -1268,14 +1275,14 @@ GList *attempt_load_gv_bg(char *filename)
     }
   }
   if (loader != NULL) gdk_pixbuf_loader_close(loader, NULL);
-  pclose(gs_pipe);
+  if (gs_pipe!=NULL) pclose(gs_pipe);
   g_free(buf);
   return bg_list;
 }
 
 struct Background *attempt_screenshot_bg(void)
 {
-#ifndef WIN32
+#ifdef GDK_WINDOWING_X11
   struct Background *bg;
   GdkPixbuf *pix;
   XEvent x_event;
@@ -1316,7 +1323,7 @@ struct Background *attempt_screenshot_bg(void)
   bg->file_domain = DOMAIN_ATTACH;
   return bg;
 #else
-  // not implemented under WIN32
+  // not implemented on non-X11 backends
   return FALSE;
 #endif
 }
@@ -1409,7 +1416,7 @@ gboolean bgpdf_scheduler_callback(gpointer data)
     if (!bgpdf.has_failed) {
       dialog = gtk_message_dialog_new(GTK_WINDOW(winMain), GTK_DIALOG_MODAL,
         GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _("Unable to render one or more PDF pages."));
-      gtk_dialog_run(GTK_DIALOG(dialog));
+      wrapper_gtk_dialog_run(GTK_DIALOG(dialog));
       gtk_widget_destroy(dialog);
     }
     bgpdf.has_failed = TRUE;
@@ -1718,6 +1725,7 @@ void init_config_default(void)
   ui.progressive_bg = TRUE;
   ui.print_ruling = TRUE;
   ui.exportpdf_prefer_legacy = FALSE;
+  ui.exportpdf_layers = FALSE;
   ui.default_unit = UNIT_CM;
   ui.default_path = NULL;
   ui.default_image = NULL;
@@ -1789,7 +1797,6 @@ void update_keyval(const gchar *group_name, const gchar *key,
                 const gchar *comment, gchar *value)
 {
   gboolean has_it = g_key_file_has_key(ui.config_data, group_name, key, NULL);
-  cleanup_numeric(value);
   g_key_file_set_value(ui.config_data, group_name, key, value);
   g_free(value);
   if (!has_it) g_key_file_set_comment(ui.config_data, group_name, key, comment, NULL);
@@ -1934,6 +1941,9 @@ void save_config_to_file(void)
   update_keyval("general", "exportpdf_prefer_legacy",
     _(" prefer xournal's own PDF code for exporting PDFs (true/false)"),
     g_strdup(ui.exportpdf_prefer_legacy?"true":"false"));
+  update_keyval("general", "exportpdf_layers",
+    _(" export successive layers on separate pages in PDFs (true/false)"),
+    g_strdup(ui.exportpdf_layers?"true":"false"));
 
   update_keyval("paper", "width",
     _(" the default page width, in points (1/72 in)"),
@@ -2109,6 +2119,7 @@ gboolean parse_keyval_float(const gchar *group, const gchar *key, double *val, d
   
   ret = g_key_file_get_value(ui.config_data, group, key, NULL);
   if (ret==NULL) return FALSE;
+  cleanup_numeric(ret);
   conv = g_ascii_strtod(ret, &end);
   if (*end!=0) { g_free(ret); return FALSE; }
   g_free(ret);
@@ -2126,6 +2137,7 @@ gboolean parse_keyval_floatlist(const gchar *group, const gchar *key, double *va
   if (n>5) return FALSE;
   ret = g_key_file_get_value(ui.config_data, group, key, NULL);
   if (ret==NULL) return FALSE;
+  cleanup_numeric(ret);
   end = ret;
   for (i=0; i<n; i++) {
     conv[i] = g_ascii_strtod(end, &end);
@@ -2314,6 +2326,7 @@ void load_config_from_file(void)
   parse_keyval_boolean("general", "autosave_prefs", &ui.auto_save_prefs);
   parse_keyval_boolean("general", "poppler_force_cairo", &ui.poppler_force_cairo);
   parse_keyval_boolean("general", "exportpdf_prefer_legacy", &ui.exportpdf_prefer_legacy);
+  parse_keyval_boolean("general", "exportpdf_layers", &ui.exportpdf_layers);
   
   parse_keyval_float("paper", "width", &ui.default_page.width, 1., 5000.);
   parse_keyval_float("paper", "height", &ui.default_page.height, 1., 5000.);

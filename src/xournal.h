@@ -39,6 +39,12 @@
 #define MRU_SIZE 8 
 #define CONFIG_FILE "config"
 
+// apparently, not all Win32/64 compilers define WIN32 (?)
+
+#ifdef _WIN32
+#define WIN32
+#endif
+
 // version string for about box
 
 #ifdef WIN32
@@ -308,6 +314,7 @@ typedef struct UIData {
   int window_default_width, window_default_height, scrollbar_step_increment;
   gboolean print_ruling; // print the paper ruling ?
   gboolean exportpdf_prefer_legacy; // prefer legacy code for export-to-pdf?
+  gboolean exportpdf_layers; // export PDF one layer at a time
   gboolean new_page_bg_from_pdf; // do new pages get a duplicated PDF/image background?
   int default_unit; // the default unit for paper sizes
   int startuptool; // the default tool at startup

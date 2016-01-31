@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <glib/gstdio.h>
 #include <libgnomecanvas/libgnomecanvas.h>
 
 #include "xournal.h"
@@ -244,6 +245,10 @@ void init_stuff (int argc, char *argv[])
   gtk_check_menu_item_set_active(
     GTK_CHECK_MENU_ITEM(GET_COMPONENT("optionsPrintRuling")), ui.print_ruling);
   gtk_check_menu_item_set_active(
+    GTK_CHECK_MENU_ITEM(GET_COMPONENT("optionsLegacyPDFExport")), ui.exportpdf_prefer_legacy);
+  gtk_check_menu_item_set_active(
+    GTK_CHECK_MENU_ITEM(GET_COMPONENT("optionsLayersPDFExport")), ui.exportpdf_layers);
+  gtk_check_menu_item_set_active(
     GTK_CHECK_MENU_ITEM(GET_COMPONENT("optionsAutoloadPdfXoj")), ui.autoload_pdf_xoj);
   gtk_check_menu_item_set_active(
     GTK_CHECK_MENU_ITEM(GET_COMPONENT("optionsAutosaveXoj")), ui.autosave_enabled);
@@ -327,7 +332,7 @@ void init_stuff (int argc, char *argv[])
   if (!success) {
     w = gtk_message_dialog_new(GTK_WINDOW (winMain), GTK_DIALOG_DESTROY_WITH_PARENT,
        GTK_MESSAGE_ERROR, GTK_BUTTONS_OK, _("Error opening file '%s'"), argv[1]);
-    gtk_dialog_run(GTK_DIALOG(w));
+    wrapper_gtk_dialog_run(GTK_DIALOG(w));
     gtk_widget_destroy(w);
   }
   if (argc == 2) return;
@@ -366,16 +371,16 @@ main (int argc, char *argv[])
   gtk_set_locale ();
   gtk_init (&argc, &argv);
 
-  add_pixmap_directory (PACKAGE_DATA_DIR "/" PACKAGE "/pixmaps");
   path = g_path_get_dirname(argv[0]);
   path1 = g_build_filename(path, "pixmaps", NULL);
   path2 = g_build_filename(path, "..", "pixmaps", NULL);
-  add_pixmap_directory (path1);
-  add_pixmap_directory (path2);
   add_pixmap_directory (path);
+  add_pixmap_directory (path2);
+  add_pixmap_directory (path1);
   g_free(path);
   g_free(path1);
   g_free(path2);
+  add_pixmap_directory (PACKAGE_DATA_DIR "/" PACKAGE "/pixmaps");
 
   /*
    * The following code was added by Glade to create one of each component
